@@ -277,6 +277,7 @@ def train(train_data, test_data=None):
                                      identity_dim = FLAGS.identity_dim,
                                      logging=True)
 
+# node2vector模型，和aggregator模型不一样
     elif FLAGS.model == 'n2v':
         model = Node2VecModel(placeholders, features.shape[0],
                                        minibatch.deg,
@@ -345,9 +346,8 @@ def train(train_data, test_data=None):
             # 在得到该批次数据的mrr的时候，不直接更新，而是将历史的mrr值也引入进来计算，避免评估结果抖动较大
             # 参考 https://www.pianshen.com/article/11191400472/ 
             if train_shadow_mrr is None:
-                train_shadow_mrr = train_mrr#
+                train_shadow_mrr = train_mrr
             else:
-                # 1-0.99中，0.99为衰减率 
                 train_shadow_mrr -= (1-0.99) * (train_shadow_mrr - train_mrr)
 
             if iter % FLAGS.validate_iter == 0:
@@ -355,10 +355,12 @@ def train(train_data, test_data=None):
                   
                 sess.run(val_adj_info.op)
                 val_cost, ranks, val_mrr, duration  = evaluate(sess, model, minibatch, size=FLAGS.validate_batch_size)
+                
                 # 验证完毕再切回训练集的邻接表信息
-
                 sess.run(train_adj_info.op)
                 epoch_val_costs[-1] += val_cost
+            
+            # 测试的mrr值，同样使用滑动平均更新
             if shadow_mrr is None:
                 shadow_mrr = val_mrr
             else:
@@ -390,10 +392,13 @@ def train(train_data, test_data=None):
                 break
     
     print("Optimization Finished!")
+
+    # 训练完毕后，计算并保存节点的特征
     if FLAGS.save_embeddings:
         sess.run(val_adj_info.op)
 
         save_val_embeddings(sess, model, minibatch, FLAGS.validate_batch_size, log_dir())
+
 
         if FLAGS.model == "n2v":
             # stopping the gradient for the already trained nodes
