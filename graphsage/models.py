@@ -288,7 +288,7 @@ class SampleAndAggregate(GeneralizedModel):
         self.placeholders = placeholders
         self.layer_infos = layer_infos
 
-        # 优化器选择为adam方法，是当前最常用的梯度更新策略
+        # 优化器选择为adam方法，当前最常用的梯度更新策略
 
         self.optimizer = tf.train.AdamOptimizer(
             learning_rate=FLAGS.learning_rate)
@@ -334,7 +334,7 @@ class SampleAndAggregate(GeneralizedModel):
             t = len(layer_infos) - k - 1  # t = 1 0
 
             # 每一跳的邻居数目是前一跳的邻居节点数*该层的采样数，有个累乘的逻辑
-            support_size *= layer_infos[t].num_samples
+            support_size *= layer_infos[t].num_samples 
 
             sampler = layer_infos[t].neigh_sampler  # 采样器选择
 
@@ -345,7 +345,7 @@ class SampleAndAggregate(GeneralizedModel):
             samples.append(tf.reshape(node, [support_size * batch_size, ]))
 
             # 同时记录好每一层的采样数
-            support_sizes.append(support_size)
+            support_sizes.append(support_size)  # support_sizes = [1,10,250]
         return samples, support_sizes
 
     def aggregate(self, samples, input_features, dims, num_samples, support_sizes, batch_size=None,
@@ -364,6 +364,8 @@ class SampleAndAggregate(GeneralizedModel):
         Returns:
             The hidden representation at the final layer for all nodes in batch
 
+
+        输入：
         samples: 一个列表，里面存放的是邻居节点id，
                 sample[0]是初始节点，可以理解为第0跳邻居采样 （hop）
                 sample[1]是对sample[0]中每一个节点进行邻居采样，即第1跳采样
@@ -373,8 +375,9 @@ class SampleAndAggregate(GeneralizedModel):
 
         num_samples: 列表，表示模型每一层的邻居采样数目，实验中为[25,10]
 
-        Returns:
-
+        输出:
+            该批次节点的特征表达
+        
 
 
 
@@ -407,7 +410,7 @@ class SampleAndAggregate(GeneralizedModel):
                 # 其中，聚合器有多种选择，是由超参定义的，
                 # 另外需要的参数是输入维度、输出维度、dropout系数等等
                 # 注意输入维度前面有个dim_mult，该值为1或者2，如果concat=True，表示节点自身的结果和邻居的会拼接一下，则从第二层开始，输入维度需要乘2
-                # 判断是否是最后一层，如果是的话，会有个参数act=lambda x: x
+                # 判断是否是最后一层，如果是的话，会有个参数act=lambda x: x，表示的是不做任何激活操作
                 if layer == len(num_samples) - 1:
                     aggregator = self.aggregator_cls(dim_mult*dims[layer], dims[layer+1], act=lambda x: x,
                                                      dropout=self.placeholders['dropout'],
@@ -432,19 +435,24 @@ class SampleAndAggregate(GeneralizedModel):
             # 随着层数增加，跳数需要减少
             for hop in range(len(num_samples) - layer):
                 dim_mult = 2 if concat and (layer != 0) else 1
-
                 # 每个节点的特征，是由自身的特征和其邻居节点的特征聚合而来的，
                 # hidden[hop+1]包含了hidden[hop]中节点的所有邻居特征
                 # 因为hidden[i]存放为二维，而mean_aggregator是需要将邻居节点特征平均，
                 # 因此需要将它reshape一下，方便在后面的处理中取所有邻居的均值
                 # neigh_dims = [batch_size * 当前跳数的支持节点数，当前层的需要采样的邻居节点数，特征数]
-                #
+                # 示例：
+                #  hop = 0 的时候
+                # support_sizes[0]= 1
+                # hidden[0].shape = [batch, num_features] 
+                # hidden[1].shape = [layer_infos[1].num_samples * batch_size, num_features]
+                # 需要把hidden[1] reshape 成 [batch * support_sizes[0], layer_infos[1].num_samples，num_features] 
+
                 neigh_dims = [batch_size * support_sizes[hop],
                               # 这个维度，对应sample函数里的 t = len(layer_infos) - k - 1
                               num_samples[len(num_samples) - hop - 1],
                               dim_mult*dims[layer]]
-                h = aggregator((hidden[hop],
-                                tf.reshape(hidden[hop + 1], neigh_dims)))
+                h = aggregator((hidden[hop],  # 自身节点
+                                tf.reshape(hidden[hop + 1], neigh_dims))) # 邻居节点
                 next_hidden.append(h)
             hidden = next_hidden
 
@@ -519,7 +527,7 @@ class SampleAndAggregate(GeneralizedModel):
                                                       bilinear_weights=False,
                                                       name='edge_predict')
 
-        # 对输出的样本执行L2规范化，dim=0或者1，1是表示按行做
+        # 对输出的样本执行L2规范化，axis=1表示作用的维度，这里是按行做
         # x_l2[i] = x[i]/sqrt(sum(x^2))
         # 对应论文 Algorithm 1的第7行
         self.outputs1 = tf.nn.l2_normalize(self.outputs1, 1)
