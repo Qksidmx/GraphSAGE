@@ -15,7 +15,7 @@ class SupervisedGraphsage(models.SampleAndAggregate):
             layer_infos, concat=True, aggregator_type="mean", 
             model_size="small", sigmoid_loss=False, identity_dim=0,
                 **kwargs):
-        '''
+        """
         Args:
             - placeholders: Stanford TensorFlow placeholder object.
             - features: Numpy array with node features.
@@ -30,7 +30,7 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         
         
         该初始化部分和Model.SampleAndAggregate类基本相同
-        '''
+        """
 
         models.GeneralizedModel.__init__(self, **kwargs)
 
