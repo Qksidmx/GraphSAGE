@@ -27,7 +27,7 @@ class MeanAggregator(Layer):
             name = '/' + name
         else:
             name = ''
-        # 权重矩阵设置对应伪代码中的W，这里自身节点和输入节点采用了不同的W，推测是为了防止过拟合
+        # 权重矩阵设置对应伪代码中的W，这里自身节点和输入节点采用了不同的W，因为self_vecs和neigh_vecs维度不一样，需要分别乘不同的权重矩阵，统一维度后相连
         with tf.variable_scope(self.name + name + '_vars'):
             self.vars['neigh_weights'] = glorot([neigh_input_dim, output_dim],
                                                 name='neigh_weights')
