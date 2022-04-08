@@ -110,13 +110,7 @@ cd /workspace/0.1.x/examples/pytorch/gcn
 python gcn_spmv.py --dataset cora --gpu 0   # dataset可选"cora", "pubmed", "citeseer"
 ```
 
-以下是自测结果，跟论文结果差不多
-
-| 数据集     | 结果(准确度) |
-| ---------- | ------------ |
-| `cora`     | 0.8270       |
-| `pubmed`   | 0.7950       |
-| `citeseer` | 0.6950       |
+更多信息请看后文的实验部分
 
 #### 0.7.x
 
@@ -162,11 +156,84 @@ Google方案预处理后的数据目录：`/mnt/ogb-dataset/mag240m/data/preproc
 
 
 
-# 附
+
+
+
+
+# 实验
+
+## dgl 0.1.x
+
+请先确保在`conda torch-0.1.x `虚拟环境下，并编译安装好了dgl包
+
+### gcn
+
+```bash
+# 测试
+cd /workspace/0.1.x/examples/pytorch/gcn
+python gcn_spmv.py --dataset cora --gpu 0   # dataset可选"cora", "pubmed", "citeseer"
+```
+
+以下是自测结果，跟论文结果差不多
+
+| 数据集     | 结果(准确度) |
+| ---------- | ------------ |
+| `cora`     | 0.8270       |
+| `pubmed`   | 0.7950       |
+| `citeseer` | 0.6950       |
+
+### gat
+
+```bash
+# 测试
+cd /workspace/0.1.x/examples/pytorch/gat
+python gat.py --dataset cora --gpu 0 --num-heads 8 --epochs 10   # dataset可选"cora", "pubmed", "citeseer"
+```
+
+
+
+### rgcn
+
+这个用的是abfi数据集，因为版本太老，dgl内置下载数据集的网址连不上了下载不了，先搁着
+
+
+
+
+
+## dgl 0.7.x
+
+请先确保在`conda pytorch-ci `虚拟环境下，并编译安装好了dgl包
+
+### graphSAGE
+
+完整文档参考https://github.com/dmlc/dgl/tree/0.7.x/examples/pytorch/graphsage
+
+```bash
+# 有监督训练
+cd /workspace/0.7.x/examples/pytorch/graphsage
+python3 train_full.py --dataset cora --gpu 0
+
+
+Epoch 00197 | Time(s) 0.0053 | Loss 0.3799 | Accuracy 0.8020 | ETputs(KTEPS) 2007.47
+Epoch 00198 | Time(s) 0.0053 | Loss 0.3787 | Accuracy 0.8020 | ETputs(KTEPS) 2008.70
+Epoch 00199 | Time(s) 0.0052 | Loss 0.3889 | Accuracy 0.8020 | ETputs(KTEPS) 2011.74
+
+Test Accuracy 0.8170
+```
+
+
+
+无监督训练因为个人PC内存不够载入不了reddit数据集，等阿里云机器空闲了再补上
+
+
+
+# MAG240M数据集
 
 阿里云IP：敏感信息不放在网上
 
-mag240原数据目录：`/mnt/ogb-dataset/mag240m/data/raw`
+### mag240原数据
+
+目录：`/mnt/ogb-dataset/mag240m/data/raw`
 
 ```
 ├── RELEASE_v1.txt
@@ -187,4 +254,36 @@ mag240原数据目录：`/mnt/ogb-dataset/mag240m/data/raw`
 └── split_dict.pt    //切分训练集、验证集、测试集方式的文件，用torch读取是一个字典，keys=[‘train’,’valid’,’test’], value是node_index
 
 ```
+
+
+
+```python
+from ogb.lsc import MAG240MDataset
+
+dataset = MAG240MDataset(root = “/mnt/ogb-dataset/mag240m/data/raw”)
+# 使用请参考 https://ogb.stanford.edu/docs/lsc/mag240m/
+```
+
+
+
+
+
+
+
+### 按年切分的数据集
+
+目录：`/mnt/ogb-dataset/mag240m/data/split_data_by_year`，文件较多，以`1960-1969_paper_nodes.npz`为例
+
+```python
+import numpy as np 
+
+data = np.load("1960-1969_paper_nodes.npz")
+
+feats = data["feats"]  # 节点特征
+year = data["year"] # 节点年份
+idx = data["idx"] #节点在原始数据集的index
+labels = data["labels"] # 节点标签
+```
+
+
 
