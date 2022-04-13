@@ -60,6 +60,7 @@ class SupervisedGraphsage(models.SampleAndAggregate):
                 raise Exception("Must have a positive value for identity feature dimension if no input features given.")
             self.features = self.embeds
         else:
+            # 这里精度从float64降低为了float32
             self.features = tf.Variable(tf.constant(features, dtype=tf.float32), trainable=False)
             if not self.embeds is None:
                 self.features = tf.concat([self.embeds, self.features], axis=1)
