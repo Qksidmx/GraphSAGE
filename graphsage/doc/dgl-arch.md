@@ -1,4 +1,3 @@
-
 ### DGL编译
 
 克隆仓库，设置分支：
@@ -12,7 +11,6 @@ git checkout -b 0.1.x --track origin/0.1.x
 
 编译流程：
 
-
 ```
 # 后续若未指明执行路径的指令，均为dgl仓库的根路径
 git submodule update --init --recursive
@@ -20,10 +18,9 @@ mkdir output && cd output
 cmake ..
 make
 sudo make install
-``
+```
 
-编译安装完毕后，即可得到libdgl.so
-linux下安装位置为/usr/local/lib/libdgl.so
+编译安装完毕后，即可得到libdgl.so。linux下安装位置为/usr/local/lib/libdgl.so
 
 python编译流程
 
@@ -48,14 +45,16 @@ source ./venv/bin/activate
 ```
 
 dgl的python库依赖：
+
+```
 networkx==2.1
 torch==1.0.0
 numpy
 scipy
+```
 
 按编译章节中的步骤build好dgl的python库之后，
 将so放入对应文件夹下，即可在build目录下调试
-
 
 ```
 cp output/libdgl.so python/build/lib/
@@ -84,7 +83,7 @@ handle = _CAPI_DGLGraphCreate(multigraph)
 gi = GraphIndex(handle)
 ```
 
-C函数：_CAPI_DGLGraphCreate，cc文件在`./src/graph/graph_apis.cc`
+C函数：`_CAPI_DGLGraphCreate`，cc文件在`./src/graph/graph_apis.cc`
 
 ```
 58 DGL_REGISTER_GLOBAL("graph_index._CAPI_DGLGraphCreate")
@@ -95,7 +94,7 @@ C函数：_CAPI_DGLGraphCreate，cc文件在`./src/graph/graph_apis.cc`
 63   });
 ```
 
-C接口注册宏（DGL_REGISTER_GLOBAL）定义在：`./include/dgl/runtime/registry.h`
+C接口注册宏（`DGL_REGISTER_GLOBAL`）定义在：`./include/dgl/runtime/registry.h`
 用于定义DGL全局函数，返回Registry实例
 
 ```
@@ -117,10 +116,6 @@ python调用cc模块流程分析
 
 此文件`./python/dgl/_ffi/function.py` 初始化调用cc的接口，并注册到每个python的module中
 因此每个module不需要显示声明cc接口即可调用
-
-
-
-
 
 ### 文件结构
 
