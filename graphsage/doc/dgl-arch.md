@@ -1,4 +1,6 @@
-### DGL编译
+## DGL0.1.x原理拆解
+
+### dgl编译
 
 克隆仓库，设置分支：
 
@@ -9,18 +11,21 @@ git checkout -b 0.1.x --track origin/0.1.x
 
 依赖dlpack和dmlc-core库，编译前需更新
 
+```
+git submodule update --init --recursive
+```
+
 编译流程：
 
 ```
 # 后续若未指明执行路径的指令，均为dgl仓库的根路径
-git submodule update --init --recursive
 mkdir output && cd output
 cmake ..
 make
 sudo make install
 ```
 
-编译安装完毕后，即可得到libdgl.so。linux下安装位置为/usr/local/lib/libdgl.so
+编译安装完毕后，即可得到libdgl.so。linux下默认安装位置为/usr/local/lib/libdgl.so
 
 python编译流程
 
@@ -31,13 +36,16 @@ cd python && python3 setup.py build
 
 python文件将生成在python/build/ 目录下
 
-引用libdgl.so的文件：
+引用了libdgl.so的文件：
+
+```
 ./python/dgl/_ffi/libinfo.py
 ./python/dgl/_ffi/base.py
+```
 
 ### dgl调试
 
-建议使用docker镜像或virtualenv调试python
+建议使用docker镜像或virtualenv/conda等虚拟环境调试python
 
 ```
 virtualenv --system-site-packages -p python3 ./venv
@@ -60,6 +68,8 @@ scipy
 cp output/libdgl.so python/build/lib/
 ```
 
+设置python的库path，方便import dgl
+
 ```
 import sys
 sys.path.append('/data/jiangjiajun750/cpp/dgl/python/build/lib')
@@ -73,10 +83,9 @@ dgl.__version__
 cd tests/graph_index && python3 test_basics.py
 ```
 
+### 函数注册流程分析
 
-### 流程分析
-
-python调用方：`./python/dgl/graph_index.py`
+python调用方之一：`./python/dgl/graph_index.py`，调用方式如下：
 
 ```
 handle = _CAPI_DGLGraphCreate(multigraph)
@@ -95,7 +104,7 @@ C函数：`_CAPI_DGLGraphCreate`，cc文件在`./src/graph/graph_apis.cc`
 ```
 
 C接口注册宏（`DGL_REGISTER_GLOBAL`）定义在：`./include/dgl/runtime/registry.h`
-用于定义DGL全局函数，返回Registry实例
+用于定义DGL全局函数
 
 ```
 #define DGL_REGISTER_GLOBAL(OpName)                              \
@@ -103,7 +112,7 @@ C接口注册宏（`DGL_REGISTER_GLOBAL`）定义在：`./include/dgl/runtime/re
       ::dgl::runtime::Registry::Register(OpName)
 ```
 
-设置函数体
+设置函数体的方法：
 
 ```
 42 Registry& Registry::set_body(PackedFunc f) {
@@ -112,13 +121,11 @@ C接口注册宏（`DGL_REGISTER_GLOBAL`）定义在：`./include/dgl/runtime/re
 45 }
 ```
 
-python调用cc模块流程分析
+python注册c函数流程分析：
 
-此文件`./python/dgl/_ffi/function.py` 初始化调用cc的接口，并注册到每个python的module中
-因此每个module不需要显示声明cc接口即可调用
+此文件`./python/dgl/_ffi/function.py` 将已注册到fmap中的c函数注册到每个python的module中，因此每个module不需要显示声明c函数即可调用
 
 ### 文件结构
-
 
 ```
 ./include/dgl/graph.h
@@ -166,9 +173,6 @@ python调用cc模块流程分析
 ./src/c_api_common.cc
 ```
 
-
 ### 参考：
 
 * openmp多线程编程：https://blog.csdn.net/acaiwlj/article/details/49818965
-
-
