@@ -25,12 +25,20 @@ python -m graphsage.supervised_train \
 
 
 
-## opeceipeno/dgl:devel-gpu
+## opeceipeno/dgl:devel-gpu-lite opeceipeno/dgl:devel-gpu-compiled
+
+旧版镜像`dgl:devel-gpu`体积较大，可以废弃了，以新的为准
+
+`opeceipeno/dgl:devel-gpu-lite` ：没有编译安装dgl
+
+`opeceipeno/dgl:devel-gpu-compiled`：已经编译安装好dgl，免去自己编译的步骤
+
+另外对`conda`环境命名作了修改，以本文档的为准
 
 ### 启动镜像命令
 
 ```bash
-docker run --gpus all -ti opeceipeno/dgl:devel-gpu bash
+docker run --gpus all -ti opeceipeno/dgl:devel-gpu-lite
 ```
 
 ### `conda`虚拟环境列表
@@ -39,11 +47,11 @@ docker run --gpus all -ti opeceipeno/dgl:devel-gpu bash
 conda env list
 
 #----输出----#
-base                     /opt/conda
-mxnet-ci                 /opt/conda/envs/mxnet-ci
-pytorch-ci               /opt/conda/envs/pytorch-ci
-tensorflow-ci            /opt/conda/envs/tensorflow-ci
-torch-0.1.x           *  /opt/conda/envs/torch-0.1.x
+# conda environments:
+#
+base                  *  /opt/conda
+dgl-0.1.x                /opt/conda/envs/dgl-0.1.x
+dgl-0.7.x                /opt/conda/envs/dgl-0.7.x
 ```
 
 ### 数据集
@@ -90,7 +98,7 @@ tree /root/.dgl
 
 ```bash
 # 激活pytorch的编译环境
-conda activate torch-0.1.x
+conda activate dgl-0.1.x
 
 # 进入目录并编译
 mkdir /workspace/0.1.x/build && cd /workspace/0.1.x/build
@@ -116,7 +124,7 @@ python gcn_spmv.py --dataset cora --gpu 0   # dataset可选"cora", "pubmed", "ci
 
 ```bash
 # 激活pytorch的编译环境
-conda activate pytorch-ci
+conda activate dgl-0.7.x
 
 # 进入目录并编译
 mkdir /workspace/0.7.x/build && cd /workspace/0.7.x/build
@@ -206,12 +214,15 @@ python gat.py --dataset cora --gpu 0 --num-heads 8 --epochs 10   # dataset可选
 
 ### graphSAGE
 
+#### cora
+
 完整文档参考https://github.com/dmlc/dgl/tree/0.7.x/examples/pytorch/graphsage
 
 ```bash
+conda activate dgl-0.7.x
 # 有监督训练
 cd /workspace/0.7.x/examples/pytorch/graphsage
-python3 train_full.py --dataset cora --gpu 0
+python3 train_full.py --dataset cora --gpu 0 
 
 
 Epoch 00197 | Time(s) 0.0053 | Loss 0.3799 | Accuracy 0.8020 | ETputs(KTEPS) 2007.47
@@ -221,9 +232,53 @@ Epoch 00199 | Time(s) 0.0052 | Loss 0.3889 | Accuracy 0.8020 | ETputs(KTEPS) 201
 Test Accuracy 0.8170
 ```
 
+#### reddit
+
+```bash
+conda activate dgl-0.7.x
+cd /workspace/0.7.x/examples/pytorch/graphsage
+
+python3 train_full.py --dataset reddit --gpu 0 --aggregator-type gcn --n_epochs 200
+# -- 输出信息--
+# Namespace(aggregator_type='gcn', dataset='reddit', dropout=0.5, gpu=0, lr=0.01, n_epochs=200, n_hidden=16, n_layers=1, weight_decay=0.0005)
+Test Accuracy 0.9329
+
+python3 train_full.py --dataset reddit --gpu 0 --aggregator-type mean --n-epochs 200
+# Namespace(aggregator_type='mean', dataset='reddit', dropout=0.5, gpu=0, lr=0.01, n_epochs=200, n_hidden=16, n_layers=1, weight_decay=0.0005)
+Test Accuracy 0.9448
+
+```
+
+```bash
+conda activate dgl-0.7.x
+pip install tqdm sklearn
+cd /workspace/0.7.x/examples/pytorch/graphsage
+
+python3 train_sampling.py --dataset reddit --num-workers 0 --gpu 0  
+
+# -- 输出信息--
+# Namespace(batch_size=1000, data_cpu=False, dataset='reddit', dropout=0.5, eval_every=5, fan_out='10,25', gpu=0, inductive=False, log_every=20, lr=0.003, num_epochs=20, num_hidden=16, num_layers=2, num_workers=0, sample_gpu=False)
+Epoch Time(s): 5.3352
+Eval Acc 0.9472
+```
 
 
-无监督训练因为个人PC内存不够载入不了reddit数据集，等阿里云机器空闲了再补上
+
+### RGAT
+
+#### reddit
+
+```bash
+conda activate dgl-0.7.x
+# 有监督训练
+cd /workspace/0.7.x/examples/pytorch/ogb_lsc/MAG240M
+python reddit_train.py --fan-out 10,25
+# 数据集结果
+Validation accuracy: 0.9680668037430238
+Test accuracy: 0.9676139525698796
+```
+
+
 
 
 
