@@ -83,9 +83,11 @@ dgl.__version__
 cd tests/graph_index && python3 test_basics.py
 ```
 
-#### docker环境搭建
+#### docker环境
 
-##### dockerfile
+该镜像已经构建好 拉取命令 `docker pull opeceipeno/dgl:devel-gpu-lite`
+
+##### Dockerfile.devel-gpu
 
 ```dockerfile
 #####################
@@ -97,8 +99,6 @@ FROM nvidia/cuda:11.2.2-devel-ubuntu18.04
 
 # 拷贝相关文件，dep目录下的文件见后文
 COPY ./dep /tmp
-
-
 
 # 安装基础软件
 RUN apt-get update && \ 
@@ -154,7 +154,7 @@ WORKDIR /workspace
 ENTRYPOINT ["/bin/bash"]
 ```
 
-##### dep文件目录
+dep文件目录
 
 ```bash
 dep，
@@ -202,6 +202,37 @@ dep，
 │   ├── README.md
 │   └── dgl_introduction-gpu.py
 └── miniconda3.sh  # miniconda3安装脚本
+```
+
+##### Dockerfile.devel-gpu-compiled
+
+该镜像是在上述镜像的基础上，提前编译好了`dgl0.1.x`和`0.7.x`，已在阿里云机器上
+
+```dockerfile
+FROM opeceipeno/dgl:devel-gpu-lite
+
+# 0.1.x
+SHELL ["conda", "run", "-n", "dgl-0.1.x", "/bin/bash", "-c"]
+
+RUN mkdir -p /workspace/0.1.x/build && \ 
+	cd /workspace/0.1.x/build && \
+	cmake .. && \
+	make -j4 && \
+	cd /workspace/0.1.x/python && \
+	python setup.py install
+
+# 0.7.x
+SHELL ["conda", "run", "-n", "dgl-0.7.x", "/bin/bash", "-c"]
+
+RUN mkdir -p /workspace/0.7.x/build && \ 
+	cd /workspace/0.7.x/build && \
+	cmake -DUSE_CUDA=ON -DBUILD_TORCH=ON .. && \
+	make -j4 && \
+	cd /workspace/0.7.x/python && \
+	python setup.py install
+
+WORKDIR /workspace
+ENTRYPOINT ["/bin/bash"]
 ```
 
 
