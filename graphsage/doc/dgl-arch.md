@@ -83,6 +83,162 @@ dgl.__version__
 cd tests/graph_index && python3 test_basics.py
 ```
 
+#### docker环境
+
+该镜像已经构建好 拉取命令 `docker pull opeceipeno/dgl:devel-gpu-lite`
+
+##### Dockerfile.devel-gpu
+
+```dockerfile
+#####################
+##  dgl开发环境镜像  ##
+#####################
+
+# 基础镜像选的英伟达11.2.2的cuda环境
+FROM nvidia/cuda:11.2.2-devel-ubuntu18.04
+
+# 拷贝相关文件，dep目录下的文件见后文
+COPY ./dep /tmp
+
+# 安装基础软件
+RUN apt-get update && \ 
+    apt-get install --no-install-recommends build-essential python3-dev make wget vim -y && \
+    apt-get clean && \
+    echo y | /bin/bash /tmp/cmake-3.22.3-linux-x86_64.sh --prefix=/usr/local && \
+	/bin/bash /tmp/miniconda3.sh -b -p /opt/conda && \
+	mkdir -p /root/.dgl /workspace && \
+	ls /tmp/dgl-src/*.tar.gz | xargs -n1 -i tar zxf {} -C /workspace && \
+	mv /tmp/dgl_tutorial/dgl_introduction-gpu.py /workspace/. && \
+	mv /tmp/dataset/* /root/.dgl/. && \
+	dpkg -i /tmp/cudnn/*.deb && \
+	rm -rf /var/lib/apt/lists/* /root/.cache/* /tmp/*
+
+# Put conda and cmake in path
+ENV CONDA_DIR=/opt/conda \
+	CMAKE_DIR=/usr/local/cmake-3.22.3-linux-x86_64
+
+ENV PATH=$CONDA_DIR/bin:$CMAKE_DIR/bin:$PATH
+
+# init conda and create conda env
+RUN conda init bash && \
+	conda create --name dgl-0.1.x python=3.8 -y && \ 
+	conda create --name dgl-0.7.x python=3.8 -y
+
+# 切换到0.1.x环境并安装相关包
+SHELL ["conda", "run", "-n", "dgl-0.1.x", "/bin/bash", "-c"]
+
+RUN python -m pip install \
+	networkx==2.1 \
+	scipy==1.8.0 \
+	torch==1.4.0 \
+	matplotlib==3.1.3 \
+	requests \
+	--no-cache-dir \
+	-i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 切换到0.7.x环境并安装相关包
+SHELL ["conda", "run", "-n", "dgl-0.7.x", "/bin/bash", "-c"]
+RUN python -m pip install \
+	networkx==2.5.1 \
+	scipy==1.8.0 requests \
+	--no-cache-dir \
+	-i https://pypi.tuna.tsinghua.edu.cn/simple && \
+	python -m pip install \
+	torch==1.9.0+cu111 \
+	torchvision==0.10.0+cu111 \
+	torchaudio==0.9.0 \
+	--no-cache-dir \
+	-f https://download.pytorch.org/whl/torch_stable.html
+
+WORKDIR /workspace
+ENTRYPOINT ["/bin/bash"]
+```
+
+dep文件目录
+
+```bash
+dep，
+├── cmake-3.22.3-linux-x86_64.sh  # 新版cmake， 通过apt-get安装的cmake 是3.10.2版本，在编译CUDA的时候会出现问题，需要用较新版本的解决
+├── cudnn # cudnn安装包
+│   ├── libcudnn8-dev_8.1.1.33-1+cuda11.2_amd64.deb
+│   ├── libcudnn8-samples_8.1.1.33-1+cuda11.2_amd64.deb
+│   └── libcudnn8_8.1.1.33-1+cuda11.2_amd64.deb
+├── dataset # 数据集
+│   ├── citeseer
+│   │   ├── ind.citeseer.allx
+│   │   ├── ind.citeseer.ally
+│   │   ├── ind.citeseer.graph
+│   │   ├── ind.citeseer.test.index
+│   │   ├── ind.citeseer.tx
+│   │   ├── ind.citeseer.ty
+│   │   ├── ind.citeseer.x
+│   │   └── ind.citeseer.y
+│   ├── cora
+│   │   ├── README
+│   │   ├── cora.cites
+│   │   └── cora.content
+│   ├── cora_v2
+│   │   ├── ind.cora_v2.allx
+│   │   ├── ind.cora_v2.ally
+│   │   ├── ind.cora_v2.graph
+│   │   ├── ind.cora_v2.test.index
+│   │   ├── ind.cora_v2.tx
+│   │   ├── ind.cora_v2.ty
+│   │   ├── ind.cora_v2.x
+│   │   └── ind.cora_v2.y
+│   └── pubmed
+│       ├── ind.pubmed.allx
+│       ├── ind.pubmed.ally
+│       ├── ind.pubmed.graph
+│       ├── ind.pubmed.test.index
+│       ├── ind.pubmed.tx
+│       ├── ind.pubmed.ty
+│       ├── ind.pubmed.x
+│       └── ind.pubmed.y
+├── dgl-src  # 代码，打成tar包了
+│   ├── dgl-src-0.1.x.tar.gz
+│   └── dgl-src-0.7.x.tar.gz 
+├── dgl_tutorial # dgl简单的示例
+│   ├── README.md
+│   └── dgl_introduction-gpu.py
+└── miniconda3.sh  # miniconda3安装脚本
+```
+
+##### Dockerfile.devel-gpu-compiled
+
+该镜像是在上述镜像的基础上，提前编译好了`dgl0.1.x`和`0.7.x`，已在阿里云机器上
+
+```dockerfile
+FROM opeceipeno/dgl:devel-gpu-lite
+
+# 0.1.x
+SHELL ["conda", "run", "-n", "dgl-0.1.x", "/bin/bash", "-c"]
+
+RUN mkdir -p /workspace/0.1.x/build && \ 
+	cd /workspace/0.1.x/build && \
+	cmake .. && \
+	make -j4 && \
+	cd /workspace/0.1.x/python && \
+	python setup.py install
+
+# 0.7.x
+SHELL ["conda", "run", "-n", "dgl-0.7.x", "/bin/bash", "-c"]
+
+RUN mkdir -p /workspace/0.7.x/build && \ 
+	cd /workspace/0.7.x/build && \
+	cmake -DUSE_CUDA=ON -DBUILD_TORCH=ON .. && \
+	make -j4 && \
+	cd /workspace/0.7.x/python && \
+	python setup.py install
+
+WORKDIR /workspace
+ENTRYPOINT ["/bin/bash"]
+```
+
+
+
+
+
 ### 函数注册流程分析
 
 python调用方之一：`./python/dgl/graph_index.py`，调用方式如下：
