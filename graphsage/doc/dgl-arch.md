@@ -1,5 +1,19 @@
 ## DGL0.1.x原理拆解
 
+- [dgl编译](#dgl编译)
+- [dgl调试](#dgl调试)
+  * [普通环境](#普通环境)
+  * [docker环境](#docker环境)
+    + [Dockerfile.devel-gpu](#dockerfiledevel-gpu)
+    + [dep文件目录](#dep文件目录)
+    + [Dockerfile.devel-gpu-compiled](#dockerfiledevel-gpu-compiled)
+- [函数注册流程分析](#函数注册流程分析)
+- [文件结构](#文件结构)
+- [编译gfs](#编译gfs)
+  * [老方法](#老方法)
+  * [cmake方法](#cmake方法)
+- [参考](#参考)
+
 ### dgl编译
 
 克隆仓库，设置分支：
@@ -329,6 +343,8 @@ python注册c函数流程分析：
 
 ### 编译gfs
 
+#### 老方法
+
 下载依赖库：
 
 ```
@@ -388,7 +404,54 @@ cd gfs/test && make newg
 ./newg
 ```
 
-### 参考：
+#### cmake方法
+
+目前简单整理了gfs的编译依赖关系，使用cmake统一管理编译，具体可查看：`gfs/CMakeLists.txt`。下一步计划将gfs嵌入至dgl中，并让其可以使用python调用。
+
+下面是使用cmake编译gfs的具体步骤。
+
+下载和更新代码仓库：
+
+```
+# 分支为0.1.x_dev
+git clone https://github.com/Qksidmx/dgl
+
+# 更新子模块
+git submodule update --init --recursive
+```
+
+编译安装fmt-4.1.0到系统中（已安装可忽略）
+
+```
+cd dgl/gfs/third_party/fmt && mkdir build && cd build
+cmake ..
+make -j 8
+sudo make install
+```
+
+编译安装sparsehash-2.0.4到系统中（已安装可忽略）
+
+```
+cd dgl/gfs/third_party/sparsehash
+./configure
+make -j 8
+sudo make install
+```
+
+正式编译gfs：
+
+```
+mkdir build && cd build
+cmake .. && make -j 8
+# 测试：
+./newg
+```
+
+其中`libgfs.a` 和 `newg` 将生成在build目录下，可以直接使用。libgfs.a已包含了libfmt.a的内容。
+
+### 参考
 
 * openmp多线程编程：https://blog.csdn.net/acaiwlj/article/details/49818965
-
+* makefile处理头文件依赖关系：https://blog.csdn.net/dlf1769/article/details/78997967
+* 合并静态库的最佳实践：https://zhuanlan.zhihu.com/p/389448385
+* cmake添加自定义操作：https://zhuanlan.zhihu.com/p/95771200
