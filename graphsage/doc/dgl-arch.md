@@ -1,5 +1,19 @@
 ## DGL0.1.x原理拆解
 
+- [dgl编译](#dgl编译)
+- [dgl调试](#dgl调试)
+  * [普通环境](#普通环境)
+  * [docker环境](#docker环境)
+    + [Dockerfile.devel-gpu](#dockerfiledevel-gpu)
+    + [dep文件目录](#dep文件目录)
+    + [Dockerfile.devel-gpu-compiled](#dockerfiledevel-gpu-compiled)
+- [函数注册流程分析](#函数注册流程分析)
+- [文件结构](#文件结构)
+- [编译gfs](#编译gfs)
+  * [老方法](#老方法)
+  * [cmake方法](#cmake方法)
+- [参考](#参考)
+
 ### dgl编译
 
 克隆仓库，设置分支：
@@ -46,6 +60,8 @@ python文件将生成在python/build/ 目录下
 ### dgl调试
 
 建议使用docker镜像或virtualenv/conda等虚拟环境调试python
+
+#### 普通环境
 
 ```
 virtualenv --system-site-packages -p python3 ./venv
@@ -101,60 +117,60 @@ FROM nvidia/cuda:11.2.2-devel-ubuntu18.04
 COPY ./dep /tmp
 
 # 安装基础软件
-RUN apt-get update && \ 
+RUN apt-get update && \
     apt-get install --no-install-recommends build-essential python3-dev make wget vim -y && \
     apt-get clean && \
     echo y | /bin/bash /tmp/cmake-3.22.3-linux-x86_64.sh --prefix=/usr/local && \
-	/bin/bash /tmp/miniconda3.sh -b -p /opt/conda && \
-	mkdir -p /root/.dgl /workspace && \
-	ls /tmp/dgl-src/*.tar.gz | xargs -n1 -i tar zxf {} -C /workspace && \
-	mv /tmp/dgl_tutorial/dgl_introduction-gpu.py /workspace/. && \
-	mv /tmp/dataset/* /root/.dgl/. && \
-	dpkg -i /tmp/cudnn/*.deb && \
-	rm -rf /var/lib/apt/lists/* /root/.cache/* /tmp/*
+    /bin/bash /tmp/miniconda3.sh -b -p /opt/conda && \
+    mkdir -p /root/.dgl /workspace && \
+    ls /tmp/dgl-src/*.tar.gz | xargs -n1 -i tar zxf {} -C /workspace && \
+    mv /tmp/dgl_tutorial/dgl_introduction-gpu.py /workspace/. && \
+    mv /tmp/dataset/* /root/.dgl/. && \
+    dpkg -i /tmp/cudnn/*.deb && \
+    rm -rf /var/lib/apt/lists/* /root/.cache/* /tmp/*
 
 # Put conda and cmake in path
 ENV CONDA_DIR=/opt/conda \
-	CMAKE_DIR=/usr/local/cmake-3.22.3-linux-x86_64
+    CMAKE_DIR=/usr/local/cmake-3.22.3-linux-x86_64
 
 ENV PATH=$CONDA_DIR/bin:$CMAKE_DIR/bin:$PATH
 
 # init conda and create conda env
 RUN conda init bash && \
-	conda create --name dgl-0.1.x python=3.8 -y && \ 
-	conda create --name dgl-0.7.x python=3.8 -y
+    conda create --name dgl-0.1.x python=3.8 -y && \
+    conda create --name dgl-0.7.x python=3.8 -y
 
 # 切换到0.1.x环境并安装相关包
 SHELL ["conda", "run", "-n", "dgl-0.1.x", "/bin/bash", "-c"]
 
 RUN python -m pip install \
-	networkx==2.1 \
-	scipy==1.8.0 \
-	torch==1.4.0 \
-	matplotlib==3.1.3 \
-	requests \
-	--no-cache-dir \
-	-i https://pypi.tuna.tsinghua.edu.cn/simple
+    networkx==2.1 \
+    scipy==1.8.0 \
+    torch==1.4.0 \
+    matplotlib==3.1.3 \
+    requests \
+    --no-cache-dir \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 切换到0.7.x环境并安装相关包
 SHELL ["conda", "run", "-n", "dgl-0.7.x", "/bin/bash", "-c"]
 RUN python -m pip install \
-	networkx==2.5.1 \
-	scipy==1.8.0 requests \
-	--no-cache-dir \
-	-i https://pypi.tuna.tsinghua.edu.cn/simple && \
-	python -m pip install \
-	torch==1.9.0+cu111 \
-	torchvision==0.10.0+cu111 \
-	torchaudio==0.9.0 \
-	--no-cache-dir \
-	-f https://download.pytorch.org/whl/torch_stable.html
+    networkx==2.5.1 \
+    scipy==1.8.0 requests \
+    --no-cache-dir \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple && \
+    python -m pip install \
+    torch==1.9.0+cu111 \
+    torchvision==0.10.0+cu111 \
+    torchaudio==0.9.0 \
+    --no-cache-dir \
+    -f https://download.pytorch.org/whl/torch_stable.html
 
 WORKDIR /workspace
 ENTRYPOINT ["/bin/bash"]
 ```
 
-dep文件目录
+##### dep文件目录
 
 ```bash
 dep，
@@ -197,7 +213,7 @@ dep，
 │       └── ind.pubmed.y
 ├── dgl-src  # 代码，打成tar包了
 │   ├── dgl-src-0.1.x.tar.gz
-│   └── dgl-src-0.7.x.tar.gz 
+│   └── dgl-src-0.7.x.tar.gz
 ├── dgl_tutorial # dgl简单的示例
 │   ├── README.md
 │   └── dgl_introduction-gpu.py
@@ -214,30 +230,26 @@ FROM opeceipeno/dgl:devel-gpu-lite
 # 0.1.x
 SHELL ["conda", "run", "-n", "dgl-0.1.x", "/bin/bash", "-c"]
 
-RUN mkdir -p /workspace/0.1.x/build && \ 
-	cd /workspace/0.1.x/build && \
-	cmake .. && \
-	make -j4 && \
-	cd /workspace/0.1.x/python && \
-	python setup.py install
+RUN mkdir -p /workspace/0.1.x/build && \
+    cd /workspace/0.1.x/build && \
+    cmake .. && \
+    make -j4 && \
+    cd /workspace/0.1.x/python && \
+    python setup.py install
 
 # 0.7.x
 SHELL ["conda", "run", "-n", "dgl-0.7.x", "/bin/bash", "-c"]
 
-RUN mkdir -p /workspace/0.7.x/build && \ 
-	cd /workspace/0.7.x/build && \
-	cmake -DUSE_CUDA=ON -DBUILD_TORCH=ON .. && \
-	make -j4 && \
-	cd /workspace/0.7.x/python && \
-	python setup.py install
+RUN mkdir -p /workspace/0.7.x/build && \
+    cd /workspace/0.7.x/build && \
+    cmake -DUSE_CUDA=ON -DBUILD_TORCH=ON .. && \
+    make -j4 && \
+    cd /workspace/0.7.x/python && \
+    python setup.py install
 
 WORKDIR /workspace
 ENTRYPOINT ["/bin/bash"]
 ```
-
-
-
-
 
 ### 函数注册流程分析
 
@@ -329,6 +341,117 @@ python注册c函数流程分析：
 ./src/c_api_common.cc
 ```
 
-### 参考：
+### 编译gfs
+
+#### 老方法
+
+下载依赖库：
+
+```
+wget https://github.com/fmtlib/fmt/archive/refs/tags/4.1.0.zip
+wget https://github.com/sparsehash/sparsehash/archive/refs/tags/sparsehash-2.0.4.zip
+```
+
+编译fmt-4.1.0
+
+```
+mkdir build && cd build
+cmake ..
+make -j 8
+sudo make install
+```
+
+编译sparsehash-sparsehash-2.0.4
+
+```
+./configure
+make -j 8
+sudo make install
+```
+
+正式编译gfs：
+
+```
+cd gfs/env && make
+cd gfs/fs && make
+cd gfs/metrics && make
+cd monitoring && make
+cd util && make
+cd util/threadpool && make
+```
+
+期间可能有报错如下：
+
+```
+# 缺少：zlib-devel
+# dgl/gfs/fs/../../gfs/util/ioutil.h:36:18: 致命错误：zlib.h：没有那个文件或目录
+# 则安装zlib-devel
+yum install zlib-devel
+```
+
+编译util/threadpool为空时，可以先直接用c++编译：
+
+```
+g++ -g -std=c++11 -Wall -DSKG_EDGE_DATA_COLUMN_STOAGE -DSKG_PROPERTIES_SUPPORT_NULL -D_FILE_OFFSET_BITS=64 -DDB_ADAPTER -DSKG_DISABLE_COMPRESSION -DSKG_PREPROCESS_DYNAMIC_EDGE -DUSE_STL_PRIORITY_QUEUE -DSKG_SUPPORT_THREAD_LOCAL -DSKG_QUERY_USE_MT -DSKG_REQ_VAR_PROP -I/data/jiangjiajun750/cpp/dgl/gfs/util/threadpool/../../../gfs -c thread_pool_impl.cc -o /data/jiangjiajun750/cpp/dgl/gfs/util/../../gfs/obj/thread_pool_impl.o
+```
+
+构建lib和测试：
+
+```
+cp fmt-4.1.0/build/fmt/libfmt.a gfs/test/
+cd gfs/test && make lib
+cd gfs/test && make newg
+./newg
+```
+
+#### cmake方法
+
+目前简单整理了gfs的编译依赖关系，使用cmake统一管理编译，具体可查看：`gfs/CMakeLists.txt`。下一步计划将gfs嵌入至dgl中，并让其可以使用python调用。
+
+下面是使用cmake编译gfs的具体步骤。
+
+下载和更新代码仓库：
+
+```
+# 分支为0.1.x_dev
+git clone https://github.com/Qksidmx/dgl
+
+# 更新子模块
+git submodule update --init --recursive
+```
+
+编译安装fmt-4.1.0到系统中（已安装可忽略）
+
+```
+cd dgl/gfs/third_party/fmt && mkdir build && cd build
+cmake ..
+make -j 8
+sudo make install
+```
+
+编译安装sparsehash-2.0.4到系统中（已安装可忽略）
+
+```
+cd dgl/gfs/third_party/sparsehash
+./configure
+make -j 8
+sudo make install
+```
+
+正式编译gfs：
+
+```
+mkdir build && cd build
+cmake .. && make -j 8
+# 测试：
+./newg
+```
+
+其中`libgfs.a` 和 `newg` 将生成在build目录下，可以直接使用。libgfs.a已包含了libfmt.a的内容。
+
+### 参考
 
 * openmp多线程编程：https://blog.csdn.net/acaiwlj/article/details/49818965
+* makefile处理头文件依赖关系：https://blog.csdn.net/dlf1769/article/details/78997967
+* 合并静态库的最佳实践：https://zhuanlan.zhihu.com/p/389448385
+* cmake添加自定义操作：https://zhuanlan.zhihu.com/p/95771200
