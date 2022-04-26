@@ -406,6 +406,8 @@ cd gfs/test && make newg
 
 #### cmake方法
 
+##### cpp编译和调试
+
 目前已将gfs整体编译至dgl的so中，使用cmake统一管理编译，具体可查看：`CMakeLists.txt 和gfs/CMakeLists.txt`。下一步计划打通python调用。
 
 下面是使用cmake编译gfs+dgl的具体步骤。
@@ -447,7 +449,32 @@ cmake .. && make -j 8
 ./newg
 ```
 
-其中`libdgl.so` 和 `newg` 将生成在build目录下，可以直接使用。
+其中`libdgl.so` 和 `newg` 将生成在build目录下，可以直接使用。编译好一次以后，再改动c++代码的话，可以简化执行指令和加速编译：
+
+```
+cd build && make -j 8 && cp libdgl.so ../lib && cp libdgl.so ../python/build/lib
+```
+
+##### python编译和调试
+
+进入python虚拟环境，conda、virtualenv或者docker均可
+
+```
+# virtualenv ，环境初始化参考前面部分
+source ./venv/bin/activate
+```
+
+编译python
+
+```
+cd python && python3 setup.py build
+```
+
+执行python测试脚本：
+
+```
+cd tests/graph_index && python3 test_skg_graph.py
+```
 
 ### 参考
 
