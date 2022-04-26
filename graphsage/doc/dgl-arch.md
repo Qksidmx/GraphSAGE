@@ -12,6 +12,9 @@
 - [编译gfs](#编译gfs)
   * [老方法](#老方法)
   * [cmake方法](#cmake方法)
+    + [cpp编译和调试](#cpp编译和调试)
+    + [python编译和调试](#python编译和调试)
+- [python适配skg](#python适配skg)
 - [参考](#参考)
 
 ### dgl编译
@@ -475,6 +478,12 @@ cd python && python3 setup.py build
 ```
 cd tests/graph_index && python3 test_skg_graph.py
 ```
+
+### python适配skg
+
+1. 在[src/graph/graph_apis.cc](https://github.com/Qksidmx/dgl/pull/5/files#diff-19423a58edbf734c7ca15887ae44dc006f8637bc17131ad93f4ad4e966e3145f)中，增加c++接口
+2. 在`python/dgl/skg_graph.py`中增加python调用c++的接口
+3. 如果遇到需要适配类型的，在[include/dgl/runtime/packed_func.h](https://github.com/Qksidmx/dgl/pull/5/files#diff-92a1be03aa2520a4c97216c15c026009ff2ebc16d370c370ff199e4d250bffef)中增加类型适配即可
 
 ### 参考
 
