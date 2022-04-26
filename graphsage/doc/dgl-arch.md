@@ -406,9 +406,9 @@ cd gfs/test && make newg
 
 #### cmake方法
 
-目前简单整理了gfs的编译依赖关系，使用cmake统一管理编译，具体可查看：`gfs/CMakeLists.txt`。下一步计划将gfs嵌入至dgl中，并让其可以使用python调用。
+目前已将gfs整体编译至dgl的so中，使用cmake统一管理编译，具体可查看：`CMakeLists.txt 和gfs/CMakeLists.txt`。下一步计划打通python调用。
 
-下面是使用cmake编译gfs的具体步骤。
+下面是使用cmake编译gfs+dgl的具体步骤。
 
 下载和更新代码仓库：
 
@@ -438,7 +438,7 @@ make -j 8
 sudo make install
 ```
 
-正式编译gfs：
+正式编译gfs+dgl：
 
 ```
 mkdir build && cd build
@@ -447,7 +447,7 @@ cmake .. && make -j 8
 ./newg
 ```
 
-其中`libgfs.a` 和 `newg` 将生成在build目录下，可以直接使用。libgfs.a已包含了libfmt.a的内容。
+其中`libdgl.so` 和 `newg` 将生成在build目录下，可以直接使用。
 
 ### 参考
 
