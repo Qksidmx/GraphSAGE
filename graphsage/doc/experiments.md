@@ -78,9 +78,9 @@ python gat.py --dataset cora --gpu 0 --num-heads 8 --epochs 10   # dataset可选
 | -------- | --------- | ---------- | ---- |
 | ogbn-mag | 1,939,743 | 21,111,007 |      |
 
-### rgcn
+### rgcn 
 
-
+(代码目录`examples/pytorch/rgcn`)
 
 #### 数据集介绍
 
@@ -91,8 +91,6 @@ dataset = dgl.data.MUTAGDataset()
 dataset = dgl.data.BGSDataset()
 dataset = dgl.data.AMDataset()
 ```
-
-
 
 使用上述`DGL0.8.x`的内置数据集加载，最后得到的图和原始的略有不同。 DGL直接加载和预处理原始 RDF 数据。 对于 AIFB、BGS 和 AM，从图中删除所有文字节点。 对于 AIFB，从训练/测试集中排除孤立节点。最终生成的图的节点、边、关系数目都有减少。下图是区别(带有`-hetero`的是DGL的) ：
 
@@ -178,16 +176,30 @@ python entity_sample.py -d am --n-bases 40 --gpu 0 --batch-size 64 --use-self-lo
 
 ### rgcn-hetero
 
-| Dataset      | #Nodes    | #Edges     | #Relations | #Labeled | 内存消耗 | 显存消耗 | 备注 |
-| ------------ | --------- | ---------- | ---------- | -------- | -------- | -------- | ---- |
-| AIFB         | 8,285     | 58,086     | 90         | 176      |          |          |      |
-| AIFB-hetero  | 7,262     | 48,810     | 78         | 176      | 4.502G   | 1671M    |      |
-| MUTAG        | 23,644    | 148,454    | 46         | 340      |          |          |      |
-| MUTAG-hetero | 27,163    | 148,100    | 46         | 340      | 4.494G   | 1689M    |      |
-| BGS          | 333,845   | 1,832,398  | 206        | 146      |          |          |      |
-| BGS-hetero   | 94,806    | 672,884    | 96         | 146      | 4.506G   | 1805M    |      |
-| AM           | 1,666,764 | 11,976,642 | 266        | 1000     |          |          |      |
-| AM-hetero    | 881,680   | 5,668,682  | 96         | 1000     | 4.634G   | 12125M   |      |
+ (代码目录`examples/pytorch/rgcn-hetero`)
+
+| Dataset      | #Nodes    | #Edges     | #Relations | #Labeled | 内存消耗 | 显存消耗 | Acc        |
+| ------------ | --------- | ---------- | ---------- | -------- | -------- | -------- | ---------- |
+| AIFB         | 8,285     | 58,086     | 90         | 176      |          |          |            |
+| AIFB-hetero  | 7,262     | 48,810     | 78         | 176      | 4.502G   | 1671M    |            |
+| MUTAG        | 23,644    | 148,454    | 46         | 340      |          |          |            |
+| MUTAG-hetero | 27,163    | 148,100    | 46         | 340      | 4.494G   | 1689M    |            |
+| BGS          | 333,845   | 1,832,398  | 206        | 146      |          |          |            |
+| BGS-hetero   | 94,806    | 672,884    | 96         | 146      | 4.506G   | 1805M    |            |
+| AM           | 1,666,764 | 11,976,642 | 266        | 1000     |          |          |            |
+| AM-hetero    | 881,680   | 5,668,682  | 96         | 1000     | 4.634G   | 12125M   | **0.8230** |
+
+
+
+**运行指令**
+
+```bash
+python3 entity_classify.py -d am --l2norm 5e-4 --n-bases 40 --testing --gpu 0
+```
+
+#### 结论
+
+rgcn-hetero比rgcn性能好些，也占用了更多的资源，具体模型结构还没看
 
 
 
@@ -210,18 +222,30 @@ Test Accuracy 0.8170
 
 #### reddit
 
+文档里跑的结果如下，`FULL-BATCH`的效果略好于`MINI-BATCH`，文档没说明参数，应该是默认参数
+
+| Model             | Accuracy |
+| ----------------- | -------- |
+| Full Graph        | 0.9504   |
+| Neighbor Sampling | 0.9495   |
+
+
+
+以下是自己跑的结果
+
 ```bash
 conda activate dgl-0.7.x
 cd /workspace/0.7.x/examples/pytorch/graphsage
 
-python3 train_full.py --dataset reddit --gpu 0 --aggregator-type gcn --n_epochs 200
+python3 train_full.py --dataset reddit --gpu 0 --aggregator-type gcn --n-epochs 200
 # -- 输出信息--
 # Namespace(aggregator_type='gcn', dataset='reddit', dropout=0.5, gpu=0, lr=0.01, n_epochs=200, n_hidden=16, n_layers=1, weight_decay=0.0005)
-Test Accuracy 0.9329
+# 注意这里n_layers=1， 表示的是模型隐藏层层数，但是实际上在代码里，模型构建只会有个输入层和输出层，隐藏层为0
+Test Accuracy 0.9340
 
 python3 train_full.py --dataset reddit --gpu 0 --aggregator-type mean --n-epochs 200
 # Namespace(aggregator_type='mean', dataset='reddit', dropout=0.5, gpu=0, lr=0.01, n_epochs=200, n_hidden=16, n_layers=1, weight_decay=0.0005)
-Test Accuracy 0.9448
+Test Accuracy 0.9481
 
 ```
 
@@ -230,13 +254,23 @@ conda activate dgl-0.7.x
 pip install tqdm sklearn
 cd /workspace/0.7.x/examples/pytorch/graphsage
 
-python3 train_sampling.py --dataset reddit --num-workers 0 --gpu 0  
+python3 train_sampling.py --dataset reddit --num-workers 0 --gpu 0  --lr 0.01 --num-epochs=200
 
 # -- 输出信息--
-# Namespace(batch_size=1000, data_cpu=False, dataset='reddit', dropout=0.5, eval_every=5, fan_out='10,25', gpu=0, inductive=False, log_every=20, lr=0.003, num_epochs=20, num_hidden=16, num_layers=2, num_workers=0, sample_gpu=False)
+# 采样的聚合方式代码里固定是 mean
+# 注意这里num_layers=2， 表示的是模型隐藏层层数，但是实际上在代码里，模型只会有个输入层和输出层，隐藏层为0
+# Namespace(batch_size=1000, data_cpu=False, dataset='reddit', dropout=0.5, eval_every=5, fan_out='10,25', gpu=0, inductive=False, log_every=20, lr=0.01, num_epochs=200, num_hidden=16, num_layers=2, num_workers=0, sample_gpu=False)
 Epoch Time(s): 5.3352
-Eval Acc 0.9472
+Test Acc: 0.9492
+
+# 在20个epoch的时候，Acc就基本收敛了，比full batch收敛速度快很多
 ```
+
+
+
+
+
+
 
 
 
