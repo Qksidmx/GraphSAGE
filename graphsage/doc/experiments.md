@@ -60,6 +60,16 @@ python gcn_spmv.py --dataset cora --gpu 0   # dataset可选"cora", "pubmed", "ci
 | `pubmed`   | 0.7950       |
 | `citeseer` | 0.6950       |
 
+#### 加载ogbn_mag数据，运行实验
+
+`dgl 0.1.x`版本不支持异构图，因此此次实验只加载了mag数据集的论文节点图做训练，相关代码已上传至git，使用full batch训练资源消耗情况如下：
+
+|      | 论文节点数 | 论文引用边数 | 节点特征维度 | hidden维度 | 内存消耗 | 显存消耗 |      |
+| ---- | ---------- | ------------ | ------------ | ---------- | -------- | -------- | ---- |
+|      | 79W        | 570W         | 128          | 16         | 3.19G    | 13G      |      |
+
+### 
+
 ### gat
 
 ```bash
@@ -222,7 +232,7 @@ Test Accuracy 0.8170
 
 #### reddit
 
-文档里跑的结果如下，`FULL-BATCH`的效果略好于`MINI-BATCH`，文档没说明参数，应该是默认参数
+文档里跑的结果如下，`FULL-BATCH`的效果略好于`MINI-BATCH`，文档没说明参数
 
 | Model             | Accuracy |
 | ----------------- | -------- |
@@ -268,13 +278,11 @@ Test Acc: 0.9492
 
 
 
-
-
-
-
-
-
 ### RGAT
+
+ (代码目录`examples/pytorch/ogb_lsc/MAG240M`)
+
+该目录是dgl的MAG240M示例代码，使用的是RGAT模型，我根据代码，将数据集换成了reddit测试效果。
 
 #### reddit
 
@@ -303,6 +311,14 @@ python reddit_train.py --fan-out 10,25
 Validation accuracy: 0.9680668037430238
 Test accuracy: 0.9676139525698796
 ```
+
+
+
+效果比graphSAGE好2%。
+
+
+
+
 
 
 
